@@ -19,4 +19,6 @@ substring blacklist -
 2. adjust the mute time
 3. upload it to tampermonkey
 4. work it like you would with all the other ones
-5. 
+5. # more info
+6. ive included an example phrase in the codes. you may edit or remove it as you wish
+if you need help, open an issue for script help
