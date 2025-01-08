@@ -1,0 +1,103 @@
+// ==UserScript==
+// @name         YouTube Transcript Mute (Substring Blacklist)
+// @namespace    http://tampermonkey.net/
+// @version      1.3
+// @description  Mutes YouTube videos when specific substrings appear in the transcript.
+// @match        *://www.youtube.com/*
+// @grant        none
+// ==/UserScript==
+
+(function () {
+    'use strict';
+
+    // Blacklisted substrings. Add any word or phrase you want to mute.
+    const blacklist = [
+        "chees", // Matches anything containing "chees" (e.g., "cheese", "cheeseburger", etc.)
+        "exampleword1", // Replace with your word
+        "exampleword2"  // Replace with your word
+    ];
+
+    // Mute duration (in milliseconds)
+    const muteDuration = 10000; // 10 seconds
+
+    // Flag to prevent duplicate muting
+    let isMuted = false;
+
+    /**
+     * Mutes the video for a specified duration.
+     */
+    function muteVideo() {
+        const videoPlayer = document.querySelector('video');
+        if (videoPlayer && !isMuted) {
+            isMuted = true;
+            videoPlayer.muted = true;
+            console.log("Video muted for blacklisted substring.");
+
+            setTimeout(() => {
+                videoPlayer.muted = false;
+                isMuted = false;
+                console.log("Video unmuted.");
+            }, muteDuration);
+        }
+    }
+
+    /**
+     * Checks the transcript for blacklisted substrings.
+     */
+    function checkTranscript() {
+        const transcriptLines = document.querySelectorAll('#segments-container yt-formatted-string');
+
+        if (!transcriptLines || transcriptLines.length === 0) {
+            console.warn("Transcript not found or unavailable.");
+            return;
+        }
+
+        // Get the most recent line of the transcript
+        const lastLine = transcriptLines[transcriptLines.length - 1];
+        const lineText = lastLine.innerText.toLowerCase();
+
+        // Check if the line contains any blacklisted substring
+        for (const word of blacklist) {
+            if (lineText.includes(word.toLowerCase())) {
+                console.log(`Blacklisted substring detected: "${word}" in line: "${lineText}"`);
+                muteVideo();
+                break;
+            }
+        }
+    }
+
+    /**
+     * Observes the transcript for updates.
+     */
+    function monitorTranscript() {
+        const transcriptContainer = document.querySelector('#segments-container');
+
+        if (!transcriptContainer) {
+            console.warn("Transcript container not found.");
+            return;
+        }
+
+        const observer = new MutationObserver(() => {
+            checkTranscript(); // Check transcript on any update
+        });
+
+        observer.observe(transcriptContainer, { childList: true, subtree: true });
+        console.log("Started monitoring transcript for blacklisted substrings.");
+    }
+
+    /**
+     * Ensures the transcript is enabled.
+     */
+    function ensureTranscriptEnabled() {
+        const transcriptButton = document.querySelector('button[aria-label*="Transcript"]');
+        if (transcriptButton && !document.querySelector('#segments-container')) {
+            transcriptButton.click();
+            console.log("Transcript enabled.");
+        }
+    }
+
+    /**
+     * Initializes the script.
+     */
+    function initialize() {
+        console.log("Initializing YouTube Transcript Mute (
