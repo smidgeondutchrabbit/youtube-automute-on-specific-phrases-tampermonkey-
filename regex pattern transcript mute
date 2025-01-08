@@ -1,0 +1,114 @@
+// ==UserScript==
+// @name         YouTube Transcript Mute (Regex Blacklist)
+// @namespace    http://tampermonkey.net/
+// @version      1.2
+// @description  Mutes YouTube videos when blacklisted patterns (regex) appear in the transcript.
+// @match        *://www.youtube.com/*
+// @grant        none
+// ==/UserScript==
+
+(function () {
+    'use strict';
+
+    // Blacklisted patterns using regex. Add your regex patterns here.
+    const blacklistPatterns = [
+        /chees/i,         // Matches "cheese", "cheesy", "cheeseburger", etc.
+        /exampleword/i,   // Replace with your own pattern
+        /anotherword/i    // Replace with your own pattern
+    ];
+
+    // Mute duration (in milliseconds)
+    const muteDuration = 10000; // 10 seconds
+
+    // Flag to prevent duplicate muting
+    let isMuted = false;
+
+    /**
+     * Mutes the video for a specified duration.
+     */
+    function muteVideo() {
+        const videoPlayer = document.querySelector('video');
+        if (videoPlayer && !isMuted) {
+            isMuted = true;
+            videoPlayer.muted = true;
+            console.log("Video muted due to blacklisted pattern.");
+
+            setTimeout(() => {
+                videoPlayer.muted = false;
+                isMuted = false;
+                console.log("Video unmuted.");
+            }, muteDuration);
+        }
+    }
+
+    /**
+     * Checks the transcript for blacklisted patterns.
+     */
+    function checkTranscript() {
+        const transcriptLines = document.querySelectorAll('#segments-container yt-formatted-string');
+
+        if (!transcriptLines || transcriptLines.length === 0) {
+            console.warn("Transcript not found or unavailable.");
+            return;
+        }
+
+        // Get the most recent line of the transcript
+        const lastLine = transcriptLines[transcriptLines.length - 1];
+        const lineText = lastLine.innerText.toLowerCase();
+
+        // Check if the line matches any blacklisted pattern
+        for (const pattern of blacklistPatterns) {
+            if (pattern.test(lineText)) {
+                console.log(`Blacklisted pattern detected: "${pattern}" in line: "${lineText}"`);
+                muteVideo();
+                break;
+            }
+        }
+    }
+
+    /**
+     * Observes the transcript for updates.
+     */
+    function monitorTranscript() {
+        const transcriptContainer = document.querySelector('#segments-container');
+
+        if (!transcriptContainer) {
+            console.warn("Transcript container not found.");
+            return;
+        }
+
+        const observer = new MutationObserver(() => {
+            checkTranscript(); // Check transcript on any update
+        });
+
+        observer.observe(transcriptContainer, { childList: true, subtree: true });
+        console.log("Started monitoring transcript for blacklisted patterns.");
+    }
+
+    /**
+     * Ensures the transcript is enabled.
+     */
+    function ensureTranscriptEnabled() {
+        const transcriptButton = document.querySelector('button[aria-label*="Transcript"]');
+        if (transcriptButton && !document.querySelector('#segments-container')) {
+            transcriptButton.click();
+            console.log("Transcript enabled.");
+        }
+    }
+
+    /**
+     * Initializes the script.
+     */
+    function initialize() {
+        console.log("Initializing YouTube Transcript Mute (Regex Blacklist)...");
+
+        // Ensure transcript is enabled
+        ensureTranscriptEnabled();
+
+        // Start monitoring the transcript
+        setTimeout(monitorTranscript, 2000); // Start monitoring after 2 seconds
+    }
+
+    // Start the script once YouTube has loaded
+    window.addEventListener('yt-navigate-finish', initialize);
+})();
